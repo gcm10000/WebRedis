@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WebRedis.Domain.Common\WebRedis.Domain.Common.csproj" />
+    <ProjectReference Include="..\WebRedis.Infrastructure.Redis\WebRedis.Infrastructure.Redis.csproj" />
+  </ItemGroup>
+
+</Project>
