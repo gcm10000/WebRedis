@@ -9,11 +9,10 @@ namespace WebRedis.Domain.Services.Interfaces
 {
     public interface IProductService
     {
-        Task<Product> CreateProductAsync(Product product);
-        Task<Product> UpdateProductAsync(Product product);
-        Task<Product> GetProductAsync(Guid id);
-        Task<IEnumerable<Product>> GetAllProductsAsync();
-        Task<bool> DeleteProductAsync(Guid id);
-
+        Task<IEnumerable<Product>> GetAllAsync(string filter);
+        Task<Product> GetAsync(Guid id);
+        Task CreateAsync(Product product);
+        Task UpdateAsync(Product product);
+        Task DeleteAsync(Guid id);
     }
 }

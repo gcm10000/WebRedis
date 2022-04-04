@@ -1,68 +1,91 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using WebRedis.Domain.Common.Entities;
+using WebRedis.Domain.Common.Interfaces;
 using WebRedis.Domain.Services.Interfaces;
-using WebRedis.Infrastructure.Redis.Interfaces;
 
 namespace WebRedis.Domain.Services
 {
-    public class ProductService : IProductService
+    public sealed class ProductService : BaseService<Product>, IProductService
     {
-        //private readonly ICacheService<Product> _cacheService;
-        //public ProductService(ICacheService<Product> cacheService)
-        //{
-        //    _cacheService = cacheService;
-        //}
-        //public Task<Product> CreateProductAsync(Product product)
-        //{
+        private readonly ICacheService _cacheService;
+        private readonly IUnitOfWork _unitOfWork;
 
-        //}
-
-        //public Task<bool> DeleteProductAsync(Guid id)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-        //public Task<IEnumerable<Product>> GetAllProductsAsync()
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-        //public Task<Product> GetProductAsync(Guid id)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-        //public Task<Product> UpdateProductAsync(Product product)
-        //{
-        //    throw new NotImplementedException();
-        //}
-        public Task<Product> CreateProductAsync(Product product)
+        public ProductService(ICacheService cacheService, IUnitOfWork unitOfWork, IConfiguration configuration) : base(configuration)
         {
-            throw new NotImplementedException();
+            this._cacheService = cacheService;
+            this._unitOfWork = unitOfWork;
         }
 
-        public Task<bool> DeleteProductAsync(Guid id)
+        public async Task<IEnumerable<Product>> GetAllAsync(string filter)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(filter))
+                filter = "";
+
+            Expression<Func<Product, bool>> query = p => p.Name.Contains(filter) || p.Description.Contains(filter);
+            IEnumerable<Product> data;
+
+            if (UseCaching)
+                data = await _cacheService.GetEntityAsync<IEnumerable<Product>, IEnumerable<Product>>(BuildCacheKey($"GetAllFiltered:{filter}"), () => _unitOfWork.ProductRepository.GetAllAsync(query).Result);
+            else
+                data = await _unitOfWork.ProductRepository.GetAllAsync(query);
+
+            return data;
         }
 
-        public Task<IEnumerable<Product>> GetAllProductsAsync()
+        public async Task<Product> GetAsync(Guid id)
         {
-            throw new NotImplementedException();
+            Product data;
+
+            if (UseCaching)
+                data = await _cacheService.GetEntityAsync<Product, Product>(BuildCacheKey($"FindById:{id}"), () => _unitOfWork.ProductRepository.GetAsync(id).Result);
+            else
+                data = await _unitOfWork.ProductRepository.GetAsync(id);
+
+            return data;
+        }
+        //c2a22e19-caef-444c-9e0d-1e0f0e139c8b
+        public async Task CreateAsync(Product product)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            product.CreatedAt = DateTime.Now;
+            product.UpdatedAt = DateTime.Now;
+
+            await _unitOfWork.ProductRepository.CreateAsync(product);
+
+            await _unitOfWork.Commit();
+
+            await _cacheService.InvalidateCacheAsync<Product>();
         }
 
-        public Task<Product> GetProductAsync(Guid id)
+        public async Task UpdateAsync(Product product)
         {
-            throw new NotImplementedException();
+            await _unitOfWork.BeginTransactionAsync();
+
+            product.UpdatedAt = DateTime.Now;
+
+            await _unitOfWork.ProductRepository.UpdateAsync(product);
+        
+            await _unitOfWork.Commit();
+
+            await _cacheService.InvalidateCacheAsync<Product>();
         }
 
-        public Task<Product> UpdateProductAsync(Product product)
+        public async Task DeleteAsync(Guid id)
         {
-            throw new NotImplementedException();
+            await _unitOfWork.BeginTransactionAsync();
+
+            await _unitOfWork.ProductRepository.DeleteAsync(id);
+        
+            await _unitOfWork.Commit();
+            
+            await _cacheService.InvalidateCacheAsync<Product>();
         }
     }
 }

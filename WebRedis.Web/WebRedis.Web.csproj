@@ -5,7 +5,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MediatR" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="StackExchange.Redis" Version="2.5.43" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.0" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="6.3.0" />
@@ -13,7 +18,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WebRedis.Domain.Common\WebRedis.Domain.Common.csproj" />
+    <ProjectReference Include="..\WebRedis.Domain\WebRedis.Domain.csproj" />
     <ProjectReference Include="..\WebRedis.Infrastructure.Redis\WebRedis.Infrastructure.Redis.csproj" />
+    <ProjectReference Include="..\WebRedis.Infrastructure.Sql\WebRedis.Infrastructure.Sql.csproj" />
   </ItemGroup>
 
 </Project>

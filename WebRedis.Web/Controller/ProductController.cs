@@ -1,11 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using WebRedis.Domain.Commands.Product;
 using WebRedis.Domain.Common.DTO;
-using WebRedis.Domain.Common.Entities;
-using WebRedis.Infrastructure.Redis.Interfaces;
+using WebRedis.Domain.Services.Interfaces;
 
 namespace WebRedis.Controller
 {
@@ -13,57 +12,67 @@ namespace WebRedis.Controller
     [Route("api/[controller]")]
     public class ProductController : ControllerBase
     {
-        private readonly ICacheService<Product> _cacheService;
+        private readonly IProductService _productService;
+        protected readonly IMediator _mediator;
 
-        public ProductController(ICacheService<Product> cacheService)
+        public ProductController(IMediator mediator, IProductService productService)
         {
-            this._cacheService = cacheService;
+            _mediator = mediator;
+            _productService = productService;
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetAllAsync(string filter)
+        {
+            var products = await _productService.GetAllAsync(filter);
+            return Ok(products);
+        }
+        
+        [HttpGet]
+        [Route("{id}")]
         public async Task<IActionResult> GetAsync(Guid id)
         {
-            var product = await _cacheService.TryGetValueAsync(id);
+            var product = await _productService.GetAsync(id);
             return Ok(product);
         }
 
         [HttpPost]
         public async Task<IActionResult> Post(CreateProductDTO productDTO)
         {
-            Product product = new Product()
+            var command = new ProductCommandCreate()
             {
                 Name = productDTO.Name,
                 Description = productDTO.Description,
-                Price = productDTO.Price,
+                Price = productDTO.Price
             };
 
-            var returnedProduct = await _cacheService.TrySetValueAsync(product);
+            var returnedProduct = await _mediator.Send(command);
+
             return Ok(returnedProduct);
         }
 
         [HttpPut]
         public async Task<IActionResult> Put([FromQuery] Guid id, UpdateProductDTO productDTO)
         {
-            var entity = await _cacheService.TryGetValueAsync(id);
-            if (entity != default) //Update
+            var command = new ProductCommandUpdate()
             {
-                entity.Name = productDTO.Name ?? entity.Name;
-                entity.Description = productDTO.Description ?? entity.Description;
-                entity.Price = productDTO.Price ?? entity.Price;
+                Id = id,
+                Name = productDTO.Name,
+                Description = productDTO.Description,
+                Price = productDTO.Price.Value
+            };
 
-                entity.CreatedAt = entity.CreatedAt;
-                entity.UpdatedAt = DateTime.Now;
-            }
+            var returnedProduct = await _mediator.Send(command);
 
-            var returnedProduct = await _cacheService.TrySetValueAsync(entity);
             return returnedProduct != default ? Ok(returnedProduct) : NoContent();
         }
 
         [HttpDelete]
         public async Task<IActionResult> Delete(Guid guid)
         {
-            var result = await _cacheService.TryRemoveAsync(guid);
-            return result ? Ok(result) : NoContent();
+            var response = await _mediator.Send(new ProductCommandDelete() { Id = guid });
+
+            return response != default ? Ok(response) : NoContent();
         }
 
     }
